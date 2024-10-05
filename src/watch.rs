@@ -46,7 +46,6 @@ impl McLogsWatch {
         let canonpath = std::fs::canonicalize(self.path.as_str())?;
         let p = std::path::Path::new(&canonpath);
 
-        let filename = p.file_name().unwrap();
         let currdir = std::env::current_dir().unwrap();
         let parentdir = p.parent().unwrap_or(&currdir);
 
@@ -55,7 +54,7 @@ impl McLogsWatch {
             .expect("Failed to add file watch");
 
         inotify.watches()
-            .add(parentdir.to_str().unwrap(), WatchMask::DELETE | WatchMask::DELETE_SELF | WatchMask::MOVE)
+            .add(parentdir.to_str().unwrap(), WatchMask::DELETE | WatchMask::DELETE_SELF)
             .expect("Failed to add parent file dir watch");
 
         println!("Watching {}", self.path);
@@ -68,17 +67,18 @@ impl McLogsWatch {
 
             for event in events {
                 let isdir = event.mask.contains(EventMask::ISDIR);
-                let name = event.name.unwrap_or_default();
+                let name = event.name.unwrap_or_default().to_str().unwrap_or_default();
 
-                if isdir && name != filename {
+                if name != p.file_name().unwrap() && name != "" { // empty for the direct file
+                    println!("ignoring event on {}", name);
                     // ignore irrelevant files in dir
                     continue
                 }
 
-                if isdir && event.mask.contains(EventMask::DELETE) {
+                if event.mask.contains(EventMask::DELETE) {
                     println!("received {:?} event, exitting", event.mask);
                     return Ok(());
-                } else if !isdir &&event.mask.contains(EventMask::MODIFY) { 
+                } else if event.mask.contains(EventMask::MODIFY) { 
                         println!("received MODIFY event");
                 } else {
                     println!("WARN: unknown event mask received {:?}", event.mask);
