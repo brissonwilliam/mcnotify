@@ -1,34 +1,29 @@
 use std;
 use std::fs;
-use std::path::Path;
 use std::result::Result;
-use std::io::{BufReader, Seek};
-use std::time;
-use std::thread;
-use notify::{PollWatcher, RecommendedWatcher, Watcher};
+use std::io::BufReader;
+use inotify::{Inotify, WatchMask, EventMask};
 
 pub struct McLogsWatch {
     path: String,
-    stop: bool,
 }
 
 pub fn new(path :&str) -> McLogsWatch {
-    let mut stop = false;
     let new_watch = McLogsWatch{
         path: String::from(path),
-        stop: stop,
     };
     return new_watch;
 }
 
-/*
 fn open_file(path:&str) -> Result<BufReader<fs::File>, std::io::Error>{
     let file:fs::File = fs::File::open(path)?;
     let reader = BufReader::new(file);
     return Ok(reader);
 }
-*/
 
+/*  
+    This is how we can wrap the error with our own. Box<dyn> is not ideal.
+    With Rust, usually, we would want strongly typed / defined errors
 
 fn open_file(path:&str) -> Result<BufReader<fs::File>, Box<dyn std::error::Error>>{
     let file = match fs::File::open(path) {
@@ -38,97 +33,58 @@ fn open_file(path:&str) -> Result<BufReader<fs::File>, Box<dyn std::error::Error
     let reader = BufReader::new(file);
     return Ok(reader);
 }
+*/
 
-
-const POLL_FREQ:time::Duration = time::Duration::from_secs(10);
 
 impl McLogsWatch {
+    pub fn run(self) -> Result<(), Box<dyn std::error::Error>> {
+        let file = open_file(self.path.as_str())?;
 
-    fn handle_event(&mut self, res:Result<notify::Event, notify::Error>) {
-        let event = match res {
-           Ok(event) => event,
-           Err(err) => {
-                println!("watch poll event error: {}", err);
-                return
-           },
-        };
+        let mut inotify = Inotify::init()
+            .expect("Error while initializing inotify instance");
 
+        let canonpath = std::fs::canonicalize(self.path.as_str())?;
+        let p = std::path::Path::new(&canonpath);
 
-        match event.kind {
-            notify::EventKind::Any => (),
-            notify::EventKind::Access(access_kind) => (),
-            notify::EventKind::Create(create_kind) => (),
-            notify::EventKind::Modify(modify_kind) => {
+        let filename = p.file_name().unwrap();
+        let currdir = std::env::current_dir().unwrap();
+        let parentdir = p.parent().unwrap_or(&currdir);
 
-            },
-            notify::EventKind::Remove(remove_kind) => self.stop = true,
-            notify::EventKind::Other => (),
-        }
-    }
+        inotify.watches()
+            .add(self.path.as_str(),WatchMask::MODIFY | WatchMask::DELETE_SELF | WatchMask::DELETE)
+            .expect("Failed to add file watch");
 
+        inotify.watches()
+            .add(parentdir.to_str().unwrap(), WatchMask::DELETE | WatchMask::DELETE_SELF | WatchMask::MOVE)
+            .expect("Failed to add parent file dir watch");
 
-    pub fn run(&mut self) -> Result<(), Box<dyn core::error::Error>> {
+        println!("Watching {}", self.path);
 
-        let file = match open_file(self.path.as_str()) {
-            Ok(it) => it,
-            Err(err) => return Err(err),
-        };
-
-
-        // let mut watcher = notify::RecommendedWatcher::new(handle_event, config)?;
-
-        // create a new watcher
-
-        let mut stop = false;
-
-        let config = notify::Config::default().with_manual_polling();
-
-        let mut watcher = notify::PollWatcher::new(|res| {
-            let event: notify::Event = match res {
-                Ok(event) => event,
-                Err(err) => {
-                    println!("event handler error: {}", err);
-                    return;
-                },
-            };
-
-            match event.kind {
-                notify::EventKind::Any => (),
-                notify::EventKind::Access(access_kind) => (),
-                notify::EventKind::Create(create_kind) => (),
-                notify::EventKind::Modify(modify_kind) => {
-
-                },
-                notify::EventKind::Remove(remove_kind) => stop = false,
-                notify::EventKind::Other => (),
-            }
-        }, config)?;
-
-        // add the actual file path to the watch list
-        watcher.watch(Path::new(self.path.as_str()), notify::RecursiveMode::NonRecursive)?;
-
+        let mut buffer = [0; 1024];
         loop {
-            if self.stop {
-                println!("stop received, exitting");
-                break;
+            let events = inotify
+                .read_events_blocking(&mut buffer)
+                .expect("Failed to read inotify events");
+
+            for event in events {
+                let isdir = event.mask.contains(EventMask::ISDIR);
+                let name = event.name.unwrap_or_default();
+
+                if isdir && name != filename {
+                    // ignore irrelevant files in dir
+                    continue
+                }
+
+                if isdir && event.mask.contains(EventMask::DELETE) {
+                    println!("received {:?} event, exitting", event.mask);
+                    return Ok(());
+                } else if !isdir &&event.mask.contains(EventMask::MODIFY) { 
+                        println!("received MODIFY event");
+                } else {
+                    println!("WARN: unknown event mask received {:?}", event.mask);
+                }
+
             }
-
-            let start = time::Instant::now();
-
-            println!("tick, polling");
-            watcher.poll().map_err(|err| {
-                println!("poll error: {}", err);
-                return err;
-            })?;
-
-            let end = time::Instant::now();
-            let elapsed = time::Instant::duration_since(&end, start);
-
-            let wait_time = POLL_FREQ - elapsed;        
-            thread::sleep(wait_time);
         }
-
-
-        Ok(())
     } 
 }

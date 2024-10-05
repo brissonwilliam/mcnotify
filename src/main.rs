@@ -1,8 +1,4 @@
-use std::io::{BufReader, Seek};
-use std::path::Path;
 use std::string::String;
-use std::fs::File;
-use std::result::Result;
 use clap::Parser;
 
 mod watch;
@@ -19,24 +15,17 @@ fn main() {
     let args = MyArgs::parse();
     println!("INFO: provided path is {}", args.path);
 
-    let mut reader = match open_file(args.path.as_str()) {
-        Ok(reader) => reader,
-        Err(err) => {
-            println!("ERR: {}", err.as_str());
-            std::process::exit(1);
-        },
-    };
-
-    read(&mut reader)
+    let watch = watch::new(args.path.as_str());
+    watch.run().expect("error running mc notify log watch");
 }
 
+/*
 fn read(buf:&mut BufReader<File>){
     // start at the end, we only want to read new lines
     let pos_end = std::io::SeekFrom::End(0);
     let _nread = buf.seek(pos_end);
 }
 
-/*
 fn watch(path:&str) -> Result<(), notify::Error>{
     let mut watcher = notify::recommended_watcher(|res| {
         match res {
