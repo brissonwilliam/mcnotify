@@ -15,7 +15,7 @@ fn main() {
     let args = MyArgs::parse();
     println!("INFO: provided path is {}", args.path);
 
-    let watch = watch::new(args.path.as_str());
+    let mut watch = watch::new(args.path.as_str());
     watch.run().expect("error running mc notify log watch");
 }
 
