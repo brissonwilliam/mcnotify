@@ -10,15 +10,14 @@ jobs:
     environment:
       IMAGE_NAME: "${DOCKER_REG}/mcnotify:latest"
     steps:
-      - checkout:
-          path: ~/myfragshelf
+      - checkout
       - setup_remote_docker
       - run:
           name: Build docker image
-          command: docker build --tag mfs_backend .
+          command: docker build --tag mcnotify .
       - run:
           name: Set image tags
-          command: docker tag mfs_backend:latest "${IMAGE_NAME}"
+          command: docker tag mcnotify:latest "${IMAGE_NAME}"
       - run:
           name: Login to docker registry
           command: echo "${DOCKER_REG_PASS}" | docker login ${DOCKER_REG} --username "${DOCKER_REG_USER}" --password-stdin 
