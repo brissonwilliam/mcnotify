@@ -7,23 +7,21 @@ jobs:
   publish:
     docker:
       - image: cimg/base:current
-    environment:
-      IMAGE_NAME: "${DOCKER_REG}/mcnotify:latest"
     steps:
       - checkout
       - setup_remote_docker
       - run:
           name: Build docker image
-          command: docker build --tag mcnotify .
+          command: docker build --tag mcnotify:latest .
       - run:
           name: Set image tags
-          command: docker tag mcnotify:latest "${IMAGE_NAME}"
+          command: docker tag mcnotify:latest "${DOCKER_REG}/mcnotify:latest"
       - run:
           name: Login to docker registry
           command: echo "${DOCKER_REG_PASS}" | docker login ${DOCKER_REG} --username "${DOCKER_REG_USER}" --password-stdin 
       - run:
           name: Push docker image
-          command: docker image push ${IMAGE_NAME}
+          command: docker image push "${DOCKER_REG}/mcnotify:latest"
       - discord/status:
           webhook: "${DISCORD_CI_URL}"
           success_message: ":green_circle: **publish-mcnotify** build from **${CIRCLE_USERNAME}** was successful."
