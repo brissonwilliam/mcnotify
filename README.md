@@ -2,7 +2,7 @@
 
 This is a personal learning project for my first steps in Rust
 
-![image](https://github.com/user-attachments/assets/8236ae77-ef8c-4554-a84b-2e31ea9efa1a)
+![image](https://github.com/user-attachments/assets/0ca30c9c-58a1-4a96-a945-9b3b88d30751)
 
 
 ## Usage 
