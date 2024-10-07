@@ -1,4 +1,4 @@
-# Notify minecraft server logs activty to Discord. 
+# Notify minecraft server logs activity to Discord. 
 
 This is a personal learning project for my first steps in Rust
 
