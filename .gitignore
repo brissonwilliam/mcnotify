@@ -1,2 +1,5 @@
 target/
 test.txt
+testdump.txt
+testdump.log
+dump.log
