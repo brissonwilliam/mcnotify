@@ -1,7 +1,8 @@
+mod watch;
+
 use std::string::String;
 use clap::Parser;
 
-mod watch;
 
 #[derive(Parser)]
 struct MyArgs {

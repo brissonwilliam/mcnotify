@@ -1,4 +1,4 @@
 mod mcwatch;
-pub use mcwatch::new;
-
 mod event;
+
+pub use mcwatch::new;

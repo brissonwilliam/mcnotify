@@ -6,8 +6,7 @@ use std::result::Result;
 use std::io::{BufRead, BufReader, Seek};
 use reqwest;
 use inotify::{Inotify, WatchMask, EventMask};
-use super::event::{McLogEvent};
-use super::event;
+use crate::watch::event;
 
 
 pub(crate) struct McLogsWatch {
@@ -53,7 +52,7 @@ const SEEK_EOF:io::SeekFrom = io::SeekFrom::End(0);
 
 impl McLogsWatch {
 
-    fn push_notif(&self, event:McLogEvent) -> Result<(), Box<dyn Error>> {
+    fn push_notif(&self, event :event::McLogEvent) -> Result<(), Box<dyn Error>> {
         println!("DBUG: pushing to {}", self.discord_url);
 
     let body = format!(r#"
