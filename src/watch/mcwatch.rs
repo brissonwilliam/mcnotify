@@ -59,7 +59,7 @@ impl McLogsWatch {
 {{
   "content": "",
   "embeds": [{{
-    "title": "mfsbuilds MC server event",
+    "title": "Minecraft server event",
     "description": "{}",
     "color": "{}"
   }}]
